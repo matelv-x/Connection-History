@@ -38,4 +38,9 @@ Original base project: StargateProject SG1 software from the BuildAStargate/Jord
 
 Additional source/idea credit: Feature idea by Marcin/Codex over StargateProject dialing log behavior.
 
+Retro UI credit: When this add-on patches Retro navigation/menu links, those Retro UI files come from the Polklabs project:
+https://github.com/polklabs/stargate-retro
+
+Marcin/Codex modification: this repository adds SG1 v4 connection-history pages/API and only adds compatible links into the Polklabs-derived Retro UI when that UI is present.
+
 How much is copied or changed: Script-based patch with embedded/fallback logic; it modifies selected runtime and web files only.
