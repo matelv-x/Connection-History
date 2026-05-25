@@ -1,42 +1,41 @@
 # Connection History
 
-Adds a web page and API for recent Stargate connection history.
+Adds Connection History UI/API using the current final-patches installer.
 
 This repository is private while it is being checked and verified.
 
 ## Install
 
+Clone or unzip this add-on into `/home/pi`, then run:
+
 ```bash
-cd /home/pi/Stargate-Final_Patches
+cd /home/pi
 rm -rf Connection-History
 git clone https://github.com/matelv-x/Connection-History.git
 cd Connection-History
-chmod +x *.sh
-sudo ./install.sh /home/pi/sg1_v4
+chmod +x history.sh restore-history.sh
+sudo ./history.sh /home/pi/sg1_v4
 sudo systemctl restart stargate.service
 ```
 
 ## Restore / uninstall
 
 ```bash
-cd /home/pi/Stargate-Final_Patches/Connection-History
-chmod +x restore.sh
-sudo ./restore.sh /home/pi/sg1_v4
+cd /home/pi/Connection-History
+sudo ./restore-history.sh /home/pi/sg1_v4
 sudo systemctl restart stargate.service
 ```
 
 ## What it changes
 
-- Adds web/connection_history.htm and web/js/connection_history.js.
-- Adds GET /get/dialing_history support.
-- Extends dialing log/history integration.
+- Adds or repairs the Connection History page.
+- Supports `HISTORY_STYLE=current` and `HISTORY_STYLE=kristian`.
+- Adds restore cleanup for installed history files.
 
 ## Attribution and originality
 
 Original base project: StargateProject SG1 software from the BuildAStargate/Jordan/Kristian/Jonnerd project lineage.
 
-Additional source/idea credit: Feature idea by Marcin/Codex, implemented on top of StargateProject dialing log behavior.
+Additional source/idea credit: Feature idea by Marcin/Codex over StargateProject dialing log behavior.
 
-How much is copied or changed: Medium patch. It adds a new page/API and modifies selected SG1 runtime files.
-
-The included `*.patch` file, when present, shows the exact text-level changes against the base software used while packaging.
+How much is copied or changed: Script-based patch with embedded/fallback logic; it modifies selected runtime and web files only.
