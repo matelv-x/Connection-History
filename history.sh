@@ -99,6 +99,7 @@ echo "Patching and verifying server integration..."
 
 sudo python3 - "$SG1_DIR" "$HISTORY_STYLE" <<'PY'
 from pathlib import Path
+import ast
 import json
 import re
 import shutil
@@ -153,6 +154,234 @@ if not summary_path.exists():
             "dialing_failures": {"value": 0, "desc": "Lifetime Failed Dialing Attempts", "type": "int"}
         }, indent=2) + "\n", encoding="utf-8")
         print("Created fallback: config/milkyway-dialing_log.json")
+
+
+def config_value(config, key, default):
+    field = config.get(key)
+    if isinstance(field, dict) and "value" in field:
+        return field["value"]
+    return default
+
+
+def set_config_value(config, key, value, desc, value_type):
+    field = config.get(key)
+    if isinstance(field, dict):
+        field["value"] = value
+    else:
+        config[key] = {"value": value, "desc": desc, "type": value_type}
+
+
+def load_json_file(path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def parse_address(value):
+    value = value.strip()
+    try:
+        parsed = ast.literal_eval(value)
+    except (ValueError, SyntaxError):
+        return value
+    return parsed if isinstance(parsed, list) else value
+
+
+def format_legacy_time(value):
+    value = str(value or "").strip()
+    if not value:
+        return ""
+    if " " in value and "T" not in value:
+        return value.replace(" ", "T", 1)
+    return value
+
+
+def log_payload(line):
+    line = line.rstrip("\n")
+    if "]" in line:
+        return line.split("]", 1)[1].strip()
+    return line.strip()
+
+
+def log_timestamp(line):
+    if line.startswith("[") and "]" in line:
+        return format_legacy_time(line[1:].split("]", 1)[0])
+    return ""
+
+
+def get_gate_details(address, addresses_config):
+    if not isinstance(address, list):
+        return {"gate_name": "Unknown Address", "gate_type": "UNKNOWN", "gate_address": address, "source_ip": ""}
+    lookup_address = address[:-1] if len(address) >= 7 else address
+    for section, gate_type in (("lan_gates", "LAN"), ("fan_gates", "FAN"), ("standard_gates", "STANDARD")):
+        gates = config_value(addresses_config, section, {})
+        if not isinstance(gates, dict):
+            continue
+        for gate in gates.values():
+            if gate.get("gate_address") == lookup_address:
+                return {
+                    "gate_name": gate.get("name", "Unknown"),
+                    "gate_type": str(gate.get("type", gate_type)).upper(),
+                    "gate_address": gate.get("gate_address", lookup_address),
+                    "source_ip": gate.get("ip_address", ""),
+                }
+    return {"gate_name": "Unknown Address", "gate_type": "UNKNOWN", "gate_address": lookup_address, "source_ip": ""}
+
+
+def parse_legacy_milkyway_log(log_path, addresses_config):
+    if not log_path.exists():
+        return []
+
+    events = []
+    active = None
+
+    def flush_active():
+        nonlocal active
+        if not active:
+            return
+        if active.get("kind") == "failed" and active.get("receiver_address") is not None:
+            remote = get_gate_details(active.get("receiver_address"), addresses_config)
+            events.append({
+                "activity": "Failed",
+                "status": "Failed",
+                "gate_name": remote["gate_name"],
+                "gate_type": remote["gate_type"],
+                "gate_address": remote["gate_address"],
+                "source_ip": remote["source_ip"],
+                "start_time": active.get("start_time", ""),
+                "end_time": active.get("end_time", active.get("start_time", "")),
+                "mins": 0,
+                "dialer_address": active.get("dialer_address"),
+                "receiver_address": active.get("receiver_address"),
+            })
+        elif active.get("kind") == "shutdown" and active.get("activity") and active.get("receiver_address") is not None:
+            remote_address = active.get("receiver_address") if active.get("activity") == "Outbound" else active.get("dialer_address")
+            remote = get_gate_details(remote_address, addresses_config)
+            gate_type = active.get("gate_type") or remote["gate_type"]
+            events.append({
+                "activity": active.get("activity"),
+                "status": "Established",
+                "gate_name": remote["gate_name"],
+                "gate_type": str(gate_type).upper(),
+                "gate_address": remote["gate_address"],
+                "source_ip": remote["source_ip"],
+                "start_time": format_legacy_time(active.get("start_time", "")),
+                "end_time": format_legacy_time(active.get("end_time", "")),
+                "mins": active.get("mins", 0),
+                "dialer_address": active.get("dialer_address"),
+                "receiver_address": active.get("receiver_address"),
+            })
+        active = None
+
+    for raw_line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        payload = log_payload(raw_line)
+        timestamp = log_timestamp(raw_line)
+
+        if payload.startswith("Dialing Log:"):
+            flush_active()
+            if payload == "Dialing Log: Failed Outbound Dialing":
+                active = {"kind": "failed", "start_time": timestamp, "end_time": timestamp}
+            elif payload == "Dialing Log: Shutdown":
+                active = {"kind": "shutdown"}
+            else:
+                active = None
+            continue
+
+        if not active or ":" not in payload:
+            continue
+
+        key, value = payload.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+
+        if key == "Activity":
+            active["activity"] = value
+        elif key == "Gate Type":
+            active["gate_type"] = value
+        elif key == "Start Time":
+            active["start_time"] = value
+        elif key == "End Time":
+            active["end_time"] = value
+        elif key == "Elapsed":
+            try:
+                active["mins"] = float(value.split()[0])
+            except (ValueError, IndexError):
+                active["mins"] = 0
+        elif key == "Dialer Address":
+            active["dialer_address"] = parse_address(value)
+        elif key in ("Receiver Address", "Address Buffer"):
+            active["receiver_address"] = parse_address(value)
+
+    flush_active()
+    return events[-250:]
+
+
+def import_legacy_history_if_empty():
+    history_data = load_json_file(history_path, {})
+    existing = history_data if isinstance(history_data, list) else config_value(history_data, "history", [])
+    if existing:
+        print("Skipped legacy milkyway.log import: history already contains events")
+        return
+
+    addresses_config = load_json_file(config_dir / "milkyway-addresses.json", {})
+    events = parse_legacy_milkyway_log(base / "logs" / "milkyway.log", addresses_config)
+    if not events:
+        print("Skipped legacy milkyway.log import: no previous connection events found")
+        return
+
+    history_path.write_text(json.dumps({
+        "history": {
+            "value": events,
+            "desc": "Recent Stargate connection history",
+            "type": "list"
+        }
+    }, indent=2) + "\n", encoding="utf-8")
+
+    summary = load_json_file(summary_path, {})
+    if all(float(config_value(summary, key, 0) or 0) == 0 for key in (
+        "established_standard_count",
+        "established_standard_mins",
+        "established_fan_count",
+        "established_fan_mins",
+        "inbound_count",
+        "inbound_mins",
+        "dialing_failures",
+    )):
+        established_standard_count = 0
+        established_standard_mins = 0.0
+        established_fan_count = 0
+        established_fan_mins = 0.0
+        inbound_count = 0
+        inbound_mins = 0.0
+        dialing_failures = 0
+
+        for event in events:
+            mins = float(event.get("mins") or 0)
+            if event.get("status") == "Failed":
+                dialing_failures += 1
+            elif event.get("activity") == "Inbound":
+                inbound_count += 1
+                inbound_mins += mins
+            elif event.get("gate_type") == "FAN":
+                established_fan_count += 1
+                established_fan_mins += mins
+            else:
+                established_standard_count += 1
+                established_standard_mins += mins
+
+        set_config_value(summary, "established_standard_count", established_standard_count, "Lifetime Count of Established Outbound Wormholes to Movie Gates", "int")
+        set_config_value(summary, "established_standard_mins", established_standard_mins, "Lifetime Minutes Outbound Established to Movie Gates", "float")
+        set_config_value(summary, "established_fan_count", established_fan_count, "Lifetime Count of Established Outbound Wormholes to Fan Gates", "int")
+        set_config_value(summary, "established_fan_mins", established_fan_mins, "Lifetime Minutes Outbound Established to Fan Gates", "float")
+        set_config_value(summary, "inbound_count", inbound_count, "Lifetime Count of Established Inbound Wormholes", "int")
+        set_config_value(summary, "inbound_mins", inbound_mins, "Lifetime Minutes Inbound Established", "float")
+        set_config_value(summary, "dialing_failures", dialing_failures, "Lifetime Failed Dialing Attempts", "int")
+        summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+
+    print(f"Imported {len(events)} previous connection event(s) from logs/milkyway.log")
+
+
+import_legacy_history_if_empty()
 
 text = web_server.read_text(encoding="utf-8")
 
