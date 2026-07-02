@@ -31,6 +31,7 @@ sudo systemctl restart stargate.service
 - Adds or repairs the Connection History page.
 - Supports `HISTORY_STYLE=current` and `HISTORY_STYLE=kristian`.
 - Imports previous connection events from `/home/pi/sg1_v4/logs/milkyway.log` on first install when the add-on history file is empty.
+- Shows and stores all recorded connection history without the previous 100/250 event limit.
 - Adds restore cleanup for installed history files.
 
 ## Attribution and originality
