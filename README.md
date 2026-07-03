@@ -33,6 +33,7 @@ sudo systemctl restart stargate.service
 - Imports previous connection events from `/home/pi/sg1_v4/logs/milkyway.log` on first install when the add-on history file is empty.
 - Shows and stores all recorded connection history without the previous 100/250 event limit.
 - Shows inbound gate type as `FAN`, `LAN`, `STANDARD`, or `UNKNOWN` instead of using `INBOUND` as the Type value.
+- Repairs the unfinished original/first-boot SG1 inbound dialing-log hook so incoming wormholes are recorded.
 - Adds restore cleanup for installed history files.
 
 ## Attribution and originality

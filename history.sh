@@ -824,13 +824,42 @@ if connection_page.exists():
 else:
     print("WARN: web/connection_history.htm is missing, style was not applied")
 
+stargate_text = stargate_py.read_text(encoding="utf-8")
+active_inbound_hook = re.search(
+    r"(?m)^\s*self\.dialing_log\.established_inbound\s*\(",
+    stargate_text,
+)
+if not active_inbound_hook:
+    legacy_inbound_marker = """                # Log the connection!
+                # TODO: hook this up!
+                #self.dialing_log.established_inbound( self.inbound_dialer)
+"""
+    inbound_hook = """                # Log the connection!
+                self.dialing_log.established_inbound(
+                    getattr(self, "fan_gate_incoming_address", None),
+                    getattr(self, "connected_planet_name", None),
+                    getattr(self, "fan_gate_incoming_ip", None)
+                )
+"""
+    if legacy_inbound_marker in stargate_text:
+        stargate_text = stargate_text.replace(legacy_inbound_marker, inbound_hook, 1)
+        stargate_py.write_text(stargate_text, encoding="utf-8")
+        print("Patched: active inbound history hook in classes/StargateMilkyWay/stargate.py")
+    else:
+        incoming_log = "                self.log.log(f'INCOMING Wormhole from {self.connected_planet_name} established')\n"
+        if incoming_log in stargate_text:
+            stargate_text = stargate_text.replace(incoming_log, incoming_log + "\n" + inbound_hook, 1)
+            stargate_py.write_text(stargate_text, encoding="utf-8")
+            print("Patched: active inbound history hook in classes/StargateMilkyWay/stargate.py")
+        else:
+            print("WARN: could not find incoming wormhole marker for inbound history hook")
+
 missing = []
 stargate_text = stargate_py.read_text(encoding="utf-8")
 checks = {
     "from dialing_log import DialingLog": "DialingLog import",
     "self.dialing_log = DialingLog(self)": "DialingLog initialization",
     "self.dialing_log.established_outbound": "outbound established history hook",
-    "self.dialing_log.established_inbound": "inbound established history hook",
     "self.dialing_log.dialing_fail": "failed dialing history hook",
     "self.dialing_log.shutdown": "wormhole shutdown history hook",
 }
@@ -838,6 +867,9 @@ checks = {
 for needle, label in checks.items():
     if needle not in stargate_text:
         missing.append(label)
+
+if not re.search(r"(?m)^\s*self\.dialing_log\.established_inbound\s*\(", stargate_text):
+    missing.append("inbound established history hook")
 
 if missing:
     print()
