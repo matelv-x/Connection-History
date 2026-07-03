@@ -4,7 +4,6 @@
 
 Adds Connection History UI/API using the current final-patches installer.
 
-This repository is private while it is being checked and verified.
 
 ## Install
 
