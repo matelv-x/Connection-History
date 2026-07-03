@@ -1,5 +1,7 @@
 # Connection History
 
+[![Downloads](https://img.shields.io/github/downloads/matelv-x/Connection-History/total?label=downloads)](https://github.com/matelv-x/Connection-History/releases)
+
 Adds Connection History UI/API using the current final-patches installer.
 
 This repository is private while it is being checked and verified.
