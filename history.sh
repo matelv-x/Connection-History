@@ -165,6 +165,89 @@ if dialing_log_py.exists():
             dialing_log_py.write_text(updated_dialing_log_text, encoding="utf-8")
             print("Updated: classes/dialing_log.py with current history support")
 
+dialing_log_text = dialing_log_py.read_text(encoding="utf-8")
+updated_dialing_log_text = dialing_log_text
+updated_dialing_log_text = updated_dialing_log_text.replace(
+    """        remote = self.__get_gate_details_by_address(dialing_gate_address)
+        self.current_activity['activity'] = "Inbound"
+        self.current_activity['start_time'] = self.__get_time_now()
+        self.current_activity['dialer_address'] = dialing_gate_address
+""",
+    """        remote = self.__get_gate_details_by_address(dialing_gate_address)
+        if remote["gate_type"] == "UNKNOWN" and source_ip:
+            remote = self.__get_gate_details_by_source_ip(source_ip)
+        self.current_activity['activity'] = "Inbound"
+        self.current_activity['start_time'] = self.__get_time_now()
+        self.current_activity['dialer_address'] = dialing_gate_address or remote["gate_address"]
+""",
+    1,
+)
+
+if "def __get_gate_details_by_source_ip" not in updated_dialing_log_text:
+    source_ip_helper = '''    def __get_gate_details_by_source_ip(self, source_ip):
+        if not source_ip:
+            return {
+                "gate_name": "Unknown Address",
+                "gate_type": "UNKNOWN",
+                "gate_address": "",
+                "source_ip": ""
+            }
+
+        book = self.addr_manager.get_book()
+        gate_sets = []
+        for method_name, fallback_type in (
+            ("get_lan_gates", "LAN"),
+            ("get_fan_gates", "FAN"),
+            ("get_standard_gates", "STANDARD"),
+        ):
+            if hasattr(book, method_name):
+                gates = getattr(book, method_name)()
+                if isinstance(gates, dict):
+                    gate_sets.append((gates, fallback_type))
+
+        datastore = getattr(book, "datastore", None)
+        if datastore and hasattr(datastore, "get_all_configs"):
+            configs = datastore.get_all_configs()
+            for key, fallback_type in (
+                ("lan_gates", "LAN"),
+                ("fan_gates", "FAN"),
+                ("standard_gates", "STANDARD"),
+            ):
+                gates = configs.get(key, {})
+                if isinstance(gates, dict) and "value" in gates:
+                    gates = gates.get("value", {})
+                if isinstance(gates, dict):
+                    gate_sets.append((gates, fallback_type))
+
+        for gates, fallback_type in gate_sets:
+            for gate in gates.values():
+                if not isinstance(gate, dict):
+                    continue
+                if str(gate.get("ip_address", "")) == str(source_ip):
+                    gate_address = gate.get("gate_address") or source_ip
+                    return {
+                        "gate_name": gate.get("name", "Unknown"),
+                        "gate_type": str(gate.get("type", fallback_type)).upper(),
+                        "gate_address": gate_address,
+                        "source_ip": source_ip
+                    }
+
+        return {
+            "gate_name": "Unknown Address",
+            "gate_type": "UNKNOWN",
+            "gate_address": source_ip,
+            "source_ip": source_ip
+        }
+
+'''
+    marker = "    @staticmethod\n    def __address_without_origin(address):\n"
+    if marker in updated_dialing_log_text:
+        updated_dialing_log_text = updated_dialing_log_text.replace(marker, source_ip_helper + marker, 1)
+
+if updated_dialing_log_text != dialing_log_text:
+    dialing_log_py.write_text(updated_dialing_log_text, encoding="utf-8")
+    print("Updated: classes/dialing_log.py with inbound source-IP lookup")
+
 config_dir.mkdir(parents=True, exist_ok=True)
 defaults_dir.mkdir(parents=True, exist_ok=True)
 
@@ -266,8 +349,28 @@ def get_gate_details(address, addresses_config):
                     "gate_type": str(gate.get("type", gate_type)).upper(),
                     "gate_address": gate.get("gate_address", lookup_address),
                     "source_ip": gate.get("ip_address", ""),
-                }
+            }
     return {"gate_name": "Unknown Address", "gate_type": "UNKNOWN", "gate_address": lookup_address, "source_ip": ""}
+
+
+def get_gate_details_by_source_ip(source_ip, addresses_config):
+    if not source_ip:
+        return {"gate_name": "Unknown Address", "gate_type": "UNKNOWN", "gate_address": "", "source_ip": ""}
+    for section, gate_type in (("lan_gates", "LAN"), ("fan_gates", "FAN"), ("standard_gates", "STANDARD")):
+        gates = config_value(addresses_config, section, {})
+        if not isinstance(gates, dict):
+            continue
+        for gate in gates.values():
+            if not isinstance(gate, dict):
+                continue
+            if str(gate.get("ip_address", "")) == str(source_ip):
+                return {
+                    "gate_name": gate.get("name", "Unknown"),
+                    "gate_type": str(gate.get("type", gate_type)).upper(),
+                    "gate_address": gate.get("gate_address") or source_ip,
+                    "source_ip": source_ip,
+                }
+    return {"gate_name": "Unknown Address", "gate_type": "UNKNOWN", "gate_address": source_ip, "source_ip": source_ip}
 
 
 def parse_legacy_milkyway_log(log_path, addresses_config):
@@ -441,10 +544,14 @@ def normalize_existing_inbound_history_types():
     for event in events:
         if not isinstance(event, dict):
             continue
-        if event.get("activity") != "Inbound" or str(event.get("gate_type", "")).upper() != "INBOUND":
+        if event.get("activity") != "Inbound" or str(event.get("gate_type", "")).upper() not in ("INBOUND", "UNKNOWN", ""):
             continue
 
         remote = get_gate_details(event.get("dialer_address"), addresses_config)
+        if remote["gate_type"] == "UNKNOWN" and event.get("source_ip"):
+            remote = get_gate_details_by_source_ip(event.get("source_ip"), addresses_config)
+        if remote["gate_type"] == "UNKNOWN":
+            continue
         event["gate_type"] = remote["gate_type"]
         event["gate_address"] = remote["gate_address"]
         if not event.get("gate_name") or event.get("gate_name") == "Unknown":
