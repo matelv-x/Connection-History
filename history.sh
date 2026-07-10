@@ -993,23 +993,36 @@ for page in (base / "web").glob("*.htm"):
     html = page.read_text(encoding="utf-8", errors="ignore")
     if "connection_history.htm" in html:
         continue
-    anchor = '<a class="dropdown-item" href="sound_board.htm">Sound Board</a>'
-    link = anchor + '\n              <a class="dropdown-item" href="connection_history.htm">Connection History</a>'
-    if anchor in html:
-        page.write_text(html.replace(anchor, link, 1), encoding="utf-8")
-        print(f"Patched nav link: web/{page.name}")
+    anchors = [
+        '<a class="dropdown-item" href="sound_board.htm">Sound Board</a>',
+        '<a class="dropdown-item" href="#">Sound Board</a>',
+        '<a class="dropdown-item" href="debug.htm">Testing / Debug</a>',
+    ]
+    for anchor in anchors:
+        if anchor in html:
+            link = anchor + '\n              <a class="dropdown-item" href="connection_history.htm">Connection History</a>'
+            page.write_text(html.replace(anchor, link, 1), encoding="utf-8")
+            print(f"Patched nav link: web/{page.name}")
+            break
+    else:
+        print(f"WARN: could not find admin menu marker in web/{page.name}")
 
 retro_nav = base / "web" / "retro" / "js" / "navigation.js"
 if retro_nav.exists():
     js = retro_nav.read_text(encoding="utf-8", errors="ignore")
     if "connection_history.htm" not in js:
-        anchor = "            <a ${isActive('/sound_board.htm')}>Sound Board</a>"
-        link = anchor + "\n            <a ${isActive('/connection_history.htm')}>Connection History</a>"
-        if anchor in js:
-            retro_nav.write_text(js.replace(anchor, link, 1), encoding="utf-8")
-            print("Patched nav link: web/retro/js/navigation.js")
+        anchors = [
+            "            <a ${isActive('/sound_board.htm')}>Sound Board</a>",
+            "            <a ${isActive('/debug.htm')}>Testing / Debug</a>",
+        ]
+        for anchor in anchors:
+            if anchor in js:
+                link = anchor + "\n            <a ${isActive('/connection_history.htm')}>Connection History</a>"
+                retro_nav.write_text(js.replace(anchor, link, 1), encoding="utf-8")
+                print("Patched nav link: web/retro/js/navigation.js")
+                break
         else:
-            print("WARN: could not find retro Sound Board nav marker")
+            print("WARN: could not find retro admin nav marker")
 
 PY
 
