@@ -993,16 +993,16 @@ for page in (base / "web").glob("*.htm"):
     html = page.read_text(encoding="utf-8", errors="ignore")
     if "connection_history.htm" in html:
         continue
-    markers = [
-        '<a class="dropdown-item" href="config.htm">Configuration</a>',
-        '<a class="dropdown-item" href="/config.htm">Configuration</a>',
-    ]
-    link = '              <a class="dropdown-item" href="connection_history.htm">Connection History</a>\n'
-    for marker in markers:
-        if marker in html:
-            page.write_text(html.replace(marker, link + marker, 1), encoding="utf-8")
-            print(f"Patched nav link: web/{page.name}")
-            break
+    config_marker = re.search(
+        r'(?m)^\s*<a class="dropdown-item[^"]*" href="(?:/?config\.htm|#)">Configuration</a>',
+        html,
+    )
+    if config_marker:
+        indent = re.match(r"\s*", config_marker.group(0)).group(0)
+        link = f'{indent}<a class="dropdown-item" href="connection_history.htm">Connection History</a>\n'
+        html = html[:config_marker.start()] + link + html[config_marker.start():]
+        page.write_text(html, encoding="utf-8")
+        print(f"Patched nav link: web/{page.name}")
     else:
         print(f"WARN: could not find Configuration menu marker in web/{page.name}")
 
