@@ -1034,7 +1034,11 @@ sudo python3 -m py_compile \
 
 echo
 echo "Restarting Stargate service..."
-sudo systemctl restart stargate.service
+if [ "${STARGATE_ADDON_NO_RESTART:-0}" != "1" ]; then
+  sudo systemctl restart stargate.service
+else
+  echo "Stargate restart deferred by add-on manager."
+fi
 
 echo
 echo "Checking endpoint..."

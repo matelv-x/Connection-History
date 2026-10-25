@@ -40,7 +40,9 @@ restore_backup_file() {
 echo "Removing Connection History add-on from:"
 echo "  $SG1_DIR"
 
-sudo systemctl stop stargate.service || true
+if [ "${STARGATE_ADDON_NO_RESTART:-0}" != "1" ]; then
+  sudo systemctl stop stargate.service || true
+fi
 
 restore_backup_file "classes/dialing_log.py"
 restore_backup_file "config/defaults-milkyway/dialing_log.json.dist"
@@ -93,6 +95,10 @@ PY
 sudo python3 -m py_compile "$SG1_DIR/classes/web_server.py" "$SG1_DIR/classes/dialing_log.py"
 sudo find "$SG1_DIR/classes" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 sudo chown -R pi:pi "$SG1_DIR"
-sudo systemctl start stargate.service
+if [ "${STARGATE_ADDON_NO_RESTART:-0}" != "1" ]; then
+  sudo systemctl start stargate.service
+else
+  echo "Stargate restart deferred by add-on manager."
+fi
 
 echo "=== CONNECTION HISTORY RESTORE COMPLETE ==="
