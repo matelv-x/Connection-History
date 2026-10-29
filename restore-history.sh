@@ -12,31 +12,6 @@ if ! sudo -n true 2>/dev/null; then
   sudo true
 fi
 
-restore_backup_file() {
-  local rel="$1"
-  local target="$SG1_DIR/$rel"
-  local backup=""
-
-  backup="$(ls -t "$target".backup_connection_history_* 2>/dev/null | head -n 1 || true)"
-  if [ -z "$backup" ]; then
-    backup="$(ls -dt /home/pi/sg1_v4_backup_dynamic_wormhole_only_* 2>/dev/null | head -n 1 || true)"
-    if [ -n "$backup" ] && [ -e "$backup/$rel" ]; then
-      backup="$backup/$rel"
-    else
-      backup=""
-    fi
-  fi
-
-  if [ -n "$backup" ] && [ -e "$backup" ]; then
-    sudo mkdir -p "$(dirname "$target")"
-    sudo rm -rf "$target"
-    sudo cp -a "$backup" "$target"
-    echo "Restored: $rel"
-  else
-    echo "Skipped, no original backup found: $rel"
-  fi
-}
-
 echo "Removing Connection History add-on from:"
 echo "  $SG1_DIR"
 
@@ -44,12 +19,9 @@ if [ "${STARGATE_ADDON_NO_RESTART:-0}" != "1" ]; then
   sudo systemctl stop stargate.service || true
 fi
 
-restore_backup_file "classes/dialing_log.py"
-restore_backup_file "config/defaults-milkyway/dialing_log.json.dist"
-
 sudo rm -f "$SG1_DIR/web/connection_history.htm"
 sudo rm -f "$SG1_DIR/web/js/connection_history.js"
-sudo rm -f "$SG1_DIR/config/milkyway-dialing_history.json"
+echo "Preserved connection history data and compatible dialing-log methods."
 
 sudo python3 - "$SG1_DIR" <<'PY'
 import re

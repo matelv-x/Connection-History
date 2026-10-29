@@ -1,5 +1,6 @@
 {
   "maintenance_contract": 1,
+  "uninstall_contract": 2,
   "id": "connection-history",
   "name": "Connection History",
   "repository": "matelv-x/Connection-History",
@@ -7,5 +8,6 @@
   "detect": {"all": [{"path": "web/connection_history.htm"}, {"path": "web/js/connection_history.js"}]},
   "install": {"argv": ["./history.sh", "{sg1_root}"], "timeout": 900},
   "uninstall": {"argv": ["./restore-history.sh", "{sg1_root}"], "timeout": 900},
+  "archive_integration_files": ["classes/web_server.py", "web/retro/js/navigation.js"],
   "restart_required": true
 }
