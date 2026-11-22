@@ -30,6 +30,15 @@ sudo systemctl restart stargate.service
 ## What it changes
 
 - Adds or repairs the Connection History page.
+- Adds a Retro Smart Connection History page at `/retro/history.html`.
+- Combines retained call history with current FAN availability, search and
+  sorting without changing the dialing protocol.
+- Shows online FAN gates absent from retained outgoing history and FAN gates
+  whose latest outgoing attempt failed but which are online again.
+- Keeps normal Call History read-only; `DIAL` appears only in those two
+  actionable views and hands off to the existing Retro speed-dial page.
+- Preserves complete 7/8/9-symbol addresses, using exact address matching
+  first, a unique compatible 6+ symbol prefix second and unique IP last.
 - Supports `HISTORY_STYLE=current` and `HISTORY_STYLE=kristian`.
 - Imports previous connection events from `/home/pi/sg1_v4/logs/milkyway.log` on first install when the add-on history file is empty.
 - Shows and stores all recorded connection history without the previous 100/250 event limit.
@@ -47,5 +56,9 @@ Retro UI credit: When this add-on patches Retro navigation/menu links, those Ret
 https://github.com/polklabs/stargate-retro
 
 matelv-x/Codex modification: this repository adds SG1 v4 connection-history pages/API and only adds compatible links into the Polklabs-derived Retro UI when that UI is present.
+
+Smart Retro history concept and initial client prototype: Jan. Integration,
+full-address compatibility corrections and action-scope refinement:
+matelv-x/Codex, reviewed and accepted by Jan.
 
 How much is copied or changed: Script-based patch with embedded/fallback logic; it modifies selected runtime and web files only.

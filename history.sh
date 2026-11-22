@@ -93,6 +93,9 @@ copy_project_file "classes/dialing_log.py"
 copy_project_file "config/defaults-milkyway/dialing_log.json.dist"
 copy_project_file "web/connection_history.htm"
 copy_project_file "web/js/connection_history.js"
+copy_project_file "web/retro/history.html"
+copy_project_file "web/retro/js/history.js"
+copy_project_file "web/retro/css/history.css"
 
 echo
 echo "Patching and verifying server integration..."
@@ -1009,15 +1012,19 @@ for page in (base / "web").glob("*.htm"):
 retro_nav = base / "web" / "retro" / "js" / "navigation.js"
 if retro_nav.exists():
     js = retro_nav.read_text(encoding="utf-8", errors="ignore")
-    if "connection_history.htm" not in js:
+    old_link = "            <a ${isActive('/connection_history.htm')}>Connection History</a>\n"
+    new_link = "            <a ${isActive('/retro/history.html')}>Connection History</a>\n"
+    if old_link in js:
+        retro_nav.write_text(js.replace(old_link, new_link, 1), encoding="utf-8")
+        print("Updated nav link: web/retro/js/navigation.js")
+    elif "/retro/history.html" not in js:
         markers = [
             "            <a ${isActive('/config.htm')}>Configuration</a>",
             "            <a ${isActive('/info.htm')}>System Information</a>",
         ]
-        link = "            <a ${isActive('/connection_history.htm')}>Connection History</a>\n"
         for marker in markers:
             if marker in js:
-                retro_nav.write_text(js.replace(marker, link + marker, 1), encoding="utf-8")
+                retro_nav.write_text(js.replace(marker, new_link + marker, 1), encoding="utf-8")
                 print("Patched nav link: web/retro/js/navigation.js")
                 break
         else:

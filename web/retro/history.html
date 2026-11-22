@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Smart Connection History | Stargate Command</title>
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <link rel="stylesheet" href="css/navigation.css">
+  <link rel="stylesheet" href="css/history.css">
+</head>
+<body class="genos-font">
+  <main class="border history-frame">
+    <div class="history-main">
+      <header class="history-heading">
+        <div>
+          <p class="eyebrow">STARGATE COMMAND / RETRO / SMART HISTORY</p>
+          <h1>CONNECTION HISTORY</h1>
+          <p class="intro">Recorded calls and destinations ready to dial.</p>
+        </div>
+        <div class="heading-actions">
+          <a class="back-link" href="/retro/dial.html">← RETRO</a>
+          <button id="refresh" type="button">REFRESH DATA</button>
+        </div>
+      </header>
+
+      <div class="history-summary" aria-live="polite">
+        <span id="summary-total">— recorded events</span>
+        <span id="summary-outgoing">— outgoing</span>
+        <span id="summary-incoming">— incoming</span>
+        <span id="summary-uncalled">— online, not dialed</span>
+        <span id="summary-failed">— latest attempts failed, available</span>
+      </div>
+
+      <div class="filters">
+        <label>SHOW
+          <select id="view">
+            <option value="history">Call history</option>
+            <option value="uncalled">Online FAN gates not dialed</option>
+            <option value="failed">Latest FAN attempt failed, available to retry</option>
+          </select>
+        </label>
+        <label>DIRECTION
+          <select id="direction">
+            <option value="all">Incoming + outgoing</option>
+            <option value="outgoing">I called</option>
+            <option value="incoming">Called me</option>
+          </select>
+        </label>
+        <label>TIME ORDER
+          <select id="order">
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+          </select>
+        </label>
+        <label>SEARCH
+          <input id="search" type="search" placeholder="Gate, address, IP" autocomplete="off">
+        </label>
+      </div>
+
+      <p id="status-line" class="status-line" role="status">Loading call history…</p>
+      <div class="history-scroll" tabindex="0">
+        <table>
+          <thead><tr>
+            <th scope="col">TIME</th>
+            <th scope="col">DIRECTION</th>
+            <th scope="col">GATE</th>
+            <th scope="col">ADDRESS / SOURCE</th>
+            <th scope="col">RESULT</th>
+            <th scope="col">NOW</th>
+            <th id="action-heading" scope="col">ACTION</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="footnote">“Not dialed” means no outgoing attempt in the retained history. “Failed, available” means the latest outgoing attempt failed and the FAN gate is online now. Full addresses are matched first; an unambiguous compatible prefix and then IP are fallbacks. Dial is available only in the two actionable views and opens the existing Retro speed dial.</p>
+    </div>
+  </main>
+  <script type="module" src="js/history.js"></script>
+  <script type="module" src="js/navigation.js?v=retro-nav-20261121-history"></script>
+</body>
+</html>

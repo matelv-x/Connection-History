@@ -1,0 +1,47 @@
+:root { --color:#37bfde; --color-dark:#4a7297; --color-danger:#c70036; --color-good:#07ff0b; --color-alt:#fff; --background-color:#020f25; --glyph-color:#fffea5; --border:solid 4px var(--color); --border-thin:solid 2px var(--color); }
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body { background:var(--background-color); color:var(--color); font-family:Genos,Arial,sans-serif; font-size:19px; }
+.history-frame { width:min(96vw,1500px); height:min(92vh,980px); min-height:560px; margin:auto; border:4px solid var(--color); border-radius:28px; overflow:hidden; background:linear-gradient(145deg,#041a35,#020d20); box-shadow:0 0 35px #03617a66; }
+.history-main { height:100%; display:flex; flex-direction:column; padding:28px 30px 18px; gap:14px; }
+.history-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; border-bottom:2px solid var(--color); padding-bottom:12px; }
+.heading-actions { display:flex; align-items:center; gap:8px; }
+.back-link { display:inline-block; padding:5px 14px; border:2px solid var(--color); border-radius:4px; background:#04142e; color:var(--glyph-color) !important; text-decoration:none !important; white-space:nowrap; }
+.back-link:hover, .back-link:focus-visible { background:#15506a; }
+.eyebrow { margin:0; font-size:15px; letter-spacing:.14em; color:var(--glyph-color); }
+h1 { margin:0; font-size:clamp(27px,3vw,43px); font-weight:500; line-height:1; }
+.intro { margin:5px 0 0; color:#aed4df; font-size:19px; }
+button, select, input { font:inherit; }
+button, select, input[type=search] { border:2px solid var(--color); background:#04142e; color:#eefcff; border-radius:4px; }
+button { padding:5px 14px; cursor:pointer; white-space:nowrap; }
+button:hover, button:focus-visible { background:#15506a; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.history-summary { display:flex; flex-wrap:wrap; gap:8px 18px; color:var(--glyph-color); font-size:18px; }
+.history-summary span { white-space:nowrap; }
+.history-summary span:last-child { color:#ffcf78; }
+.filters { display:grid; grid-template-columns:1.2fr 1fr .8fr 1.2fr; gap:12px; }
+.filters label { display:flex; flex-direction:column; gap:3px; font-size:14px; letter-spacing:.08em; }
+.filters select, .filters input { min-width:0; width:100%; height:37px; padding:3px 8px; letter-spacing:normal; font-size:17px; }
+.filters :disabled { opacity:.55; }
+.status-line { min-height:23px; margin:0; color:#afd4df; font-size:17px; }
+.status-line.warning { color:var(--glyph-color); }
+.status-line.error { color:#ff889e; }
+.history-scroll { flex:1; min-height:0; overflow:auto; border:2px solid var(--color); }
+table { width:100%; border-collapse:collapse; font-size:18px; }
+thead { position:sticky; top:0; z-index:1; background:#0a3754; color:#fff; }
+th { text-align:left; font-size:15px; font-weight:600; letter-spacing:.05em; }
+th, td { padding:8px 10px; border-bottom:1px solid #285a74; vertical-align:middle; }
+tbody tr:nth-child(even) { background:#072238; }
+tbody tr:hover { background:#11405b; }
+td:first-child { white-space:nowrap; }
+.gate-name { color:#fff; font-size:20px; }
+.muted { color:#9dbbc8; }
+.badge { display:inline-block; padding:1px 7px; border:1px solid currentColor; border-radius:3px; white-space:nowrap; }
+.badge.online, .badge.success { color:#79f590; }
+.badge.offline, .badge.failed { color:#ffadba; }
+.badge.unknown { color:#d9d2a0; }
+.dial-button { color:var(--glyph-color); padding:2px 11px; font-size:17px; }
+.empty { padding:30px; text-align:center; color:#afc8d6; }
+.footnote { margin:0; color:#9dbbc8; font-size:15px; }
+@media(max-width:950px) { .filters { grid-template-columns:repeat(2,minmax(0,1fr)); } .history-main { padding:23px 15px 14px; } table { min-width:850px; } }
+@media(max-width:600px) { .history-frame { width:100vw; height:100dvh; min-height:0; border-radius:0; border-width:2px; } .history-heading { align-items:flex-start; } .heading-actions { flex-direction:column; align-items:stretch; } .history-heading button, .back-link { padding:3px 6px; font-size:14px; text-align:center; } .filters { gap:7px; } .filters label { font-size:12px; } .filters select, .filters input { height:33px; font-size:14px; } .footnote { font-size:13px; } }

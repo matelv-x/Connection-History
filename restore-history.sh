@@ -21,6 +21,9 @@ fi
 
 sudo rm -f "$SG1_DIR/web/connection_history.htm"
 sudo rm -f "$SG1_DIR/web/js/connection_history.js"
+sudo rm -f "$SG1_DIR/web/retro/history.html"
+sudo rm -f "$SG1_DIR/web/retro/js/history.js"
+sudo rm -f "$SG1_DIR/web/retro/css/history.css"
 echo "Preserved connection history data and compatible dialing-log methods."
 
 sudo python3 - "$SG1_DIR" <<'PY'
@@ -60,6 +63,7 @@ retro_nav = base / "web/retro/js/navigation.js"
 if retro_nav.exists():
     js = retro_nav.read_text(encoding="utf-8", errors="ignore")
     js = re.sub(r'\n\s*<a \$\{isActive\(\'/connection_history\.htm\'\)\}>Connection History</a>', "", js)
+    js = re.sub(r'\n\s*<a \$\{isActive\(\'/retro/history\.html\'\)\}>Connection History</a>', "", js)
     retro_nav.write_text(js, encoding="utf-8")
     print("Cleaned: web/retro/js/navigation.js")
 PY
