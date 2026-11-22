@@ -56,7 +56,11 @@ for page in (base / "web").glob("*.htm"):
     if page.name == "connection_history.htm":
         continue
     html = page.read_text(encoding="utf-8", errors="ignore")
-    html = re.sub(r'\n\s*<a class="dropdown-item" href="connection_history\.htm">Connection History</a>', "", html)
+    html = re.sub(
+        r'\n\s*<a class="dropdown-item" href="(?:/?connection_history\.htm|/retro/history\.html)">Connection History</a>',
+        "",
+        html,
+    )
     page.write_text(html, encoding="utf-8")
 
 retro_nav = base / "web/retro/js/navigation.js"

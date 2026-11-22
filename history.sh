@@ -924,15 +924,22 @@ if not connection_js.exists():
     connection_js.write_text(connection_js_template, encoding="utf-8")
     print("Created: web/js/connection_history.js")
 
-if connection_page.exists():
-    html = connection_page.read_text(encoding="utf-8")
-    html, count = re.subn(r"<style>.*?</style>", selected_style, html, count=1, flags=re.S)
-    if count == 0:
-        html = html.replace("</head>", selected_style + "\n  </head>", 1)
-    connection_page.write_text(html, encoding="utf-8")
-    print(f"Applied Connection History style: {history_style}")
-else:
-    print("WARN: web/connection_history.htm is missing, style was not applied")
+legacy_redirect = '''<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta http-equiv="refresh" content="0; url=/retro/history.html">
+    <title>Connection History | Stargate Command</title>
+  </head>
+  <body>
+    <p><a href="/retro/history.html">Open Smart Connection History</a></p>
+  </body>
+</html>
+'''
+connection_page.parent.mkdir(parents=True, exist_ok=True)
+connection_page.write_text(legacy_redirect, encoding="utf-8")
+print("Replaced legacy web/connection_history.htm with Smart History redirect")
 
 stargate_text = stargate_py.read_text(encoding="utf-8")
 active_inbound_hook = re.search(
@@ -994,7 +1001,16 @@ for page in (base / "web").glob("*.htm"):
     if page.name == "connection_history.htm":
         continue
     html = page.read_text(encoding="utf-8", errors="ignore")
-    if "connection_history.htm" in html:
+    updated_html = re.sub(
+        r'href=["\']/?connection_history\.htm(?:\?[^"\']*)?["\']',
+        'href="/retro/history.html"',
+        html,
+    )
+    if updated_html != html:
+        page.write_text(updated_html, encoding="utf-8")
+        print(f"Updated nav link: web/{page.name}")
+        continue
+    if "/retro/history.html" in html:
         continue
     config_marker = re.search(
         r'(?m)^\s*<a class="dropdown-item[^"]*" href="(?:/?config\.htm|#)">Configuration</a>',
@@ -1002,7 +1018,7 @@ for page in (base / "web").glob("*.htm"):
     )
     if config_marker:
         indent = re.match(r"\s*", config_marker.group(0)).group(0)
-        link = f'{indent}<a class="dropdown-item" href="connection_history.htm">Connection History</a>\n'
+        link = f'{indent}<a class="dropdown-item" href="/retro/history.html">Connection History</a>\n'
         html = html[:config_marker.start()] + link + html[config_marker.start():]
         page.write_text(html, encoding="utf-8")
         print(f"Patched nav link: web/{page.name}")
