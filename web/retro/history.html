@@ -6,7 +6,7 @@
   <title>Smart Connection History | Stargate Command</title>
   <link rel="shortcut icon" href="../img/favicon.ico">
   <link rel="stylesheet" href="css/navigation.css">
-  <link rel="stylesheet" href="css/history.css">
+  <link rel="stylesheet" href="css/history.css?v=dial-handoff-1">
 </head>
 <body class="genos-font">
   <main class="border history-frame">
@@ -75,7 +75,16 @@
       <p class="footnote">“Not dialed” means no outgoing attempt in the retained history. “Failed, available” means the latest outgoing attempt failed and the FAN gate is online now. Full addresses are matched first; an unambiguous compatible prefix and then IP are fallbacks. Dial is available only in the two actionable views and opens the existing Retro speed dial.</p>
     </div>
   </main>
-  <script type="module" src="js/history.js"></script>
+  <dialog id="dial-confirm" aria-labelledby="dial-confirm-title">
+    <form method="dialog">
+      <h2 id="dial-confirm-title">Confirm dialing</h2>
+      <p id="dial-confirm-target"></p>
+      <p id="dial-feedback" role="status"></p>
+      <button value="cancel" autofocus>Cancel</button>
+      <button id="dial-confirm-start" type="button">Open DHD and dial</button>
+    </form>
+  </dialog>
+  <script type="module" src="js/history.js?v=dial-handoff-2"></script>
   <script type="module" src="js/navigation.js?v=retro-nav-20261121-history"></script>
 </body>
 </html>

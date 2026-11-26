@@ -41,6 +41,15 @@ td:first-child { white-space:nowrap; }
 .badge.offline, .badge.failed { color:#ffadba; }
 .badge.unknown { color:#d9d2a0; }
 .dial-button { color:var(--glyph-color); padding:2px 11px; font-size:17px; }
+#dial-confirm {
+  max-width:min(32rem,85vw);
+  background:#0b202b;
+  color:#e3eef0;
+  border:1px solid #507582;
+  padding:1.25rem;
+}
+#dial-confirm::backdrop { background:#0009; }
+#dial-feedback { min-height:1.5em; }
 .empty { padding:30px; text-align:center; color:#afc8d6; }
 .footnote { margin:0; color:#9dbbc8; font-size:15px; }
 @media(max-height:850px) {

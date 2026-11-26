@@ -1,5 +1,6 @@
 const $ = selector => document.querySelector(selector);
 const state = { history: [], book: [], fresh: false, local: '', busy: false, loaded: false };
+let pendingDial = null;
 
 const normalizeAddress = address => Array.isArray(address)
   ? address.map(Number).filter(Number.isInteger) : [];
@@ -133,7 +134,12 @@ function appendDial(row, gate, visible) {
   button.type = 'button';
   button.className = 'dial-button';
   button.textContent = 'DIAL';
-  button.addEventListener('click', () => dial(gate));
+  button.addEventListener('click', () => {
+    pendingDial = gate;
+    $('#dial-confirm-target').textContent = `Dial ${gate.name} (${key(gate.gate_address)})? This starts the physical Stargate.`;
+    $('#dial-feedback').textContent = '';
+    $('#dial-confirm').showModal();
+  });
   cell.append(button);
 }
 
@@ -227,23 +233,62 @@ async function load() {
   } finally { $('#refresh').disabled = false; }
 }
 
-async function dial(gate) {
-  if (!canDial(gate)) return;
-  if (!window.confirm(`Dial ${gate.name}? This starts the physical Stargate.`)) return;
+async function dialDestination(address) {
+  const page = address.length > 6 ? 'dial9.html' : 'dial.html';
+  const fallback = new URL(`/retro/${page}`, window.location.origin);
+  fallback.searchParams.set('address', key(address));
+
   try {
-    const current = await fetchJson('/stargate/get/dialing_status');
-    if (current.wormhole_active || current.address_buffer_outgoing?.length || current.address_buffer_incoming?.length) {
-      window.alert('The gate is busy. Wait until it returns to idle.');
-      await load();
-      return;
-    }
-    const page = gate.gate_address.length > 6 ? 'dial9.html' : 'dial.html';
-    window.location.assign(`${page}?address=${encodeURIComponent(key(gate.gate_address))}`);
-  } catch (error) {
-    window.alert(`Could not verify gate status: ${error.message}`);
+    const response = await fetch('/stellar-archive/data/integration-nav.js', {
+      cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(2500)
+    });
+    if (!response.ok) return fallback;
+    const config = (await response.text()).trim().match(/^window\.STELLAR_ARCHIVE_NAV\s*=\s*(\{[\s\S]*\});$/);
+    if (!config) return fallback;
+    const home = JSON.parse(config[1]).homeByHost?.[window.location.hostname.toLowerCase()];
+    if (typeof home !== 'string' || !home.startsWith('/')) return fallback;
+    const destination = new URL(home, window.location.origin);
+    if (destination.origin !== window.location.origin) return fallback;
+    destination.searchParams.set('address', key(address));
+    destination.searchParams.set('source', 'stellar-archive');
+    return destination;
+  } catch {
+    return fallback;
   }
 }
 
+async function dial() {
+  const gate = pendingDial;
+  const dialog = $('#dial-confirm');
+  const button = $('#dial-confirm-start');
+  const feedback = $('#dial-feedback');
+  if (!gate || button.disabled) return;
+  if (!canDial(gate)) {
+    feedback.textContent = 'This destination is no longer available to dial.';
+    return;
+  }
+  button.disabled = true;
+  feedback.textContent = 'Checking gate status…';
+  try {
+    const destination = await dialDestination(gate.gate_address);
+    if (!dialog.open || pendingDial !== gate) return;
+    const current = await fetchJson('/stargate/get/dialing_status');
+    if (!dialog.open || pendingDial !== gate) return;
+    if (current.wormhole_active || current.address_buffer_outgoing?.length || current.address_buffer_incoming?.length) {
+      feedback.textContent = 'The gate is busy. Wait until it returns to idle.';
+      return;
+    }
+    feedback.textContent = 'Opening the dialing screen…';
+    window.location.assign(destination.href);
+  } catch (error) {
+    if (dialog.open && pendingDial === gate) feedback.textContent = `Could not verify gate status: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+$('#dial-confirm').addEventListener('close', () => { pendingDial = null; });
+$('#dial-confirm-start').addEventListener('click', dial);
 for (const id of ['view', 'direction', 'order', 'search']) {
   $(`#${id}`).addEventListener(id === 'search' ? 'input' : 'change', render);
 }
